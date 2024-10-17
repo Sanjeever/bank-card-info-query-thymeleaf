@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: bank-card-info-query-thymeleaf
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=10m
+server:
+  port: 8080

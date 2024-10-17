@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Card Info Query</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💳</text></svg>">
+    <link rel="stylesheet" href="/lib/bootstrap@5.3.3/bootstrap.min.css">
+</head>
+<body class="d-flex flex-column align-items-center justify-content-center vh-100">
+
+<!-- 查询表单 -->
+<form action="/card-info" method="get" class="mb-4">
+    <div class="input-group mb-3">
+        <label>
+            <input type="text" name="cardNo" class="form-control" placeholder="请输入银行卡号" required/>
+        </label>
+        <button type="submit" class="btn btn-primary">查询</button>
+    </div>
+</form>
+
+<!-- 查询结果展示 -->
+<div th:if="!${index}" class="card" style="width: 30rem;">
+    <div class="card-body">
+        <div th:if="${validated}">
+            <h5 class="card-title">查询结果</h5>
+            <p><strong>卡类型：</strong> <span th:text="${cardType}"></span></p>
+            <p><strong>发卡行：</strong> <span th:text="${bank}"></span></p>
+            <p><strong>行图标：</strong>
+                <img th:src="'https://apimg.alipay.com/combo.png?d=cashier&t=' + ${bank}"
+                     alt="行图标" style="width: 128px; height: 36px;"/>
+            </p>
+        </div>
+
+        <div th:if="${messages != null && #lists.size(messages) > 0}">
+            <p><strong>错误信息：</strong></p>
+            <ul>
+                <li th:each="msg : ${messages}" th:text="${msg.errorCodes}"></li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>
