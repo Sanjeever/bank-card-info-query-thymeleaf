@@ -1,6 +1,7 @@
 package top.sanjeev.card.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 import top.sanjeev.card.service.ImgService;
 
 import java.time.Duration;
+import java.util.concurrent.*;
 
 /**
  * @author SeanRon.Wong
@@ -15,10 +17,14 @@ import java.time.Duration;
  * @since 2024/10/18 10:34
  */
 @RequiredArgsConstructor
+@Slf4j
 @Service
 public class ImgServiceImpl implements ImgService {
 
     private final RestTemplate restTemplate;
+
+    private final ConcurrentHashMap<String, CompletableFuture<ResponseEntity<byte[]>>> inFlightRequests = new ConcurrentHashMap<>();
+
 
     /**
      * 构建请求URL
@@ -33,7 +39,7 @@ public class ImgServiceImpl implements ImgService {
     @Override
     @Cacheable(value = "imgs", key = "#bank")
     public ResponseEntity<byte[]> getByBank(String bank) {
-        ResponseEntity<byte[]> response = restTemplate.getForEntity(buildRequestUrl(bank), byte[].class);
+        ResponseEntity<byte[]> response = getByBankWithDeduplication(bank);
         if (response.getStatusCode() == HttpStatus.OK) {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.IMAGE_PNG);
@@ -42,6 +48,32 @@ public class ImgServiceImpl implements ImgService {
         } else {
             return ResponseEntity.status(response.getStatusCode()).build();
         }
+    }
+
+    private ResponseEntity<byte[]> getByBankWithDeduplication(String bank) {
+        CompletableFuture<ResponseEntity<byte[]>> future = inFlightRequests.computeIfAbsent(bank, this::createImgFuture);
+        try {
+            return future.get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            log.warn("获取行图标失败 [bank={}] [ex={}]", bank, e.getLocalizedMessage());
+            Thread.currentThread().interrupt(); // 恢复中断状态
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } finally {
+            inFlightRequests.remove(bank, future);
+        }
+    }
+
+    private CompletableFuture<ResponseEntity<byte[]>> createImgFuture(String bank) {
+        return CompletableFuture.supplyAsync(() -> {
+            String requestUrl = buildRequestUrl(bank);
+            log.info("发起API请求 [bank={}] [url={}]", bank, requestUrl);
+            try {
+                return restTemplate.getForEntity(buildRequestUrl(bank), byte[].class);
+            } catch (Exception e) {
+                log.warn("API请求失败 [bank={}] [ex={}]", bank, e.getLocalizedMessage());
+                return null;
+            }
+        });
     }
 
 }
