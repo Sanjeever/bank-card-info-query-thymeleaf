@@ -27,7 +27,7 @@
             <p><strong>卡类型：</strong> <span th:text="${cardType}"></span></p>
             <p><strong>发卡行：</strong> <span th:text="${bank}"></span></p>
             <p><strong>行图标：</strong>
-                <img th:src="'https://apimg.alipay.com/combo.png?d=cashier&t=' + ${bank}"
+                <img th:src="'/img/' + ${bank}"
                      alt="行图标" style="width: 128px; height: 36px;"/>
             </p>
         </div>
