@@ -8,10 +8,7 @@ import org.springframework.web.client.RestTemplate;
 import top.sanjeev.card.domain.CardInfo;
 import top.sanjeev.card.service.CardInfoService;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 /**
  * @author Sanjeev
@@ -24,6 +21,8 @@ import java.util.concurrent.TimeoutException;
 public class CardInfoServiceImpl implements CardInfoService {
 
     private final RestTemplate restTemplate;
+
+    private final ConcurrentHashMap<String, CompletableFuture<CardInfo>> inFlightRequests = new ConcurrentHashMap<>();
 
     /**
      * 构建请求URL
@@ -42,25 +41,34 @@ public class CardInfoServiceImpl implements CardInfoService {
     @Override
     @Cacheable(value = "card-infos", key = "#cardNo")
     public CardInfo getByCardNo(String cardNo) {
-        String requestUrl = buildRequestUrl(cardNo);
-        CompletableFuture<CardInfo> future = CompletableFuture.supplyAsync(() -> {
-            log.info("发起异步请求 URL [{}]", requestUrl);
+        return getCardInfoWithDeduplication(cardNo);
+    }
+
+    private CardInfo getCardInfoWithDeduplication(String cardNo) {
+        CompletableFuture<CardInfo> future = inFlightRequests.computeIfAbsent(cardNo, this::createCardInfoFuture);
+
+        try {
+            return future.get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            log.warn("获取卡信息失败 [cardNo={}] [ex={}]", cardNo, e.getLocalizedMessage());
+            Thread.currentThread().interrupt(); // 恢复中断状态
+            return null;
+        } finally {
+            inFlightRequests.remove(cardNo, future);
+        }
+    }
+
+    private CompletableFuture<CardInfo> createCardInfoFuture(String cardNo) {
+        return CompletableFuture.supplyAsync(() -> {
+            String requestUrl = buildRequestUrl(cardNo);
+            log.info("发起API请求 [cardNo={}] [url={}]", cardNo, requestUrl);
             try {
                 return restTemplate.getForObject(requestUrl, CardInfo.class);
             } catch (Exception e) {
-                log.warn("请求远程 API 失败 [{}] [ex={}]", requestUrl, e.getLocalizedMessage());
+                log.warn("API请求失败 [cardNo={}] [ex={}]", cardNo, e.getLocalizedMessage());
                 return null;
             }
         });
-
-        try {
-            // 同步等待异步结果，并设置超时时间为 5 秒
-            return future.get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.warn("获取异步结果失败或超时 [{}] [ex={}]", requestUrl, e.getLocalizedMessage());
-            Thread.currentThread().interrupt(); // 恢复中断状态
-            return null;
-        }
     }
 
 }
