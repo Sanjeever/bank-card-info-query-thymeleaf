@@ -25,7 +25,6 @@ public class ImgServiceImpl implements ImgService {
 
     private final ConcurrentHashMap<String, CompletableFuture<ResponseEntity<byte[]>>> inFlightRequests = new ConcurrentHashMap<>();
 
-
     /**
      * 构建请求URL
      *
@@ -51,7 +50,8 @@ public class ImgServiceImpl implements ImgService {
     }
 
     private ResponseEntity<byte[]> getByBankWithDeduplication(String bank) {
-        CompletableFuture<ResponseEntity<byte[]>> future = inFlightRequests.computeIfAbsent(bank, this::createImgFuture);
+        CompletableFuture<ResponseEntity<byte[]>> future = inFlightRequests
+            .computeIfAbsent(bank, this::createImgFuture);
         try {
             return future.get(5, TimeUnit.SECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {

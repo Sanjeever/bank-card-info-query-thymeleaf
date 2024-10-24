@@ -17,7 +17,6 @@ import top.sanjeev.card.service.ImgService;
 @RestController
 public class ImgController {
 
-
     private final ImgService imgService;
 
     @RequestMapping("/{bank}")

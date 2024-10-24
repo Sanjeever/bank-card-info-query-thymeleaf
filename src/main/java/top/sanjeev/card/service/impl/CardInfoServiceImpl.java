@@ -32,10 +32,9 @@ public class CardInfoServiceImpl implements CardInfoService {
      */
     private static String buildRequestUrl(String cardNo) {
         // 基于支付宝的 CCDC API 构建请求URL
-        return "https://ccdcapi.alipay.com/validateAndCacheCardInfo.json?" +
-                "_input_charset=utf-8&" + // 指定请求和响应的字符集为UTF-8，确保字符编码的正确处理
-                "cardBinCheck=true&" + // 启用卡BIN检查，用于验证卡号前缀是否有效
-                "cardNo=" + cardNo; // 卡号
+        return "https://ccdcapi.alipay.com/validateAndCacheCardInfo.json?" + "_input_charset=utf-8&" + // 指定请求和响应的字符集为UTF-8，确保字符编码的正确处理
+            "cardBinCheck=true&" + // 启用卡BIN检查，用于验证卡号前缀是否有效
+            "cardNo=" + cardNo; // 卡号
     }
 
     @Override

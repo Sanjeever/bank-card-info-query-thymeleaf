@@ -31,12 +31,12 @@ public final class SpringUtils implements BeanFactoryPostProcessor, ApplicationC
 
     @SuppressWarnings("all")
     public static <T> T getBean(String name) throws BeansException {
-        return (T) configurableListableBeanFactory.getBean(name);
+        return (T)configurableListableBeanFactory.getBean(name);
     }
 
     @SuppressWarnings("all")
     public static <T> T getBean(Class<T> clz) throws BeansException {
-        return (T) configurableListableBeanFactory.getBean(clz);
+        return (T)configurableListableBeanFactory.getBean(clz);
     }
 
     public static String getRequiredProperty(String key) {
